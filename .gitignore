@@ -1,0 +1,12 @@
+node_modules
+.expo
+dist
+.env
+.env.local
+*.exe
+apps/daemon/data
+apps/daemon/daemon.config.json
+coverage
+.turbo
+expo-env.d.ts
+*.tsbuildinfo

@@ -1,7 +1,11 @@
 const apiKey = process.env.NEON_API_KEY;
 if (!apiKey) {
-  console.error("Set NEON_API_KEY to create the phone-agents project and its dev branch.");
-  console.error("Create a key at https://console.neon.tech/app/settings/api-keys");
+  console.error(
+    "Set NEON_API_KEY to create the phone-agents project and its dev branch.",
+  );
+  console.error(
+    "Create a key at https://console.neon.tech/app/settings/api-keys",
+  );
   process.exit(1);
 }
 
@@ -9,7 +13,9 @@ const region = process.env.NEON_REGION ?? "aws-ap-southeast-1";
 const projectName = process.env.NEON_PROJECT_NAME ?? "phone-agents";
 const writeEnv = process.argv.includes("--write");
 
-const projectId = process.env.NEON_PROJECT_ID ?? (await findOrCreateProject(apiKey, projectName, region));
+const projectId =
+  process.env.NEON_PROJECT_ID ??
+  (await findOrCreateProject(apiKey, projectName, region));
 await ensureDevBranch(apiKey, projectId);
 const connection = await connectionUri(apiKey, projectId);
 const direct = toDirect(connection);
@@ -23,7 +29,11 @@ if (writeEnv) {
   console.log(`Wrote ${path.pathname}`);
 }
 
-async function neon(key: string, path: string, init?: RequestInit): Promise<unknown> {
+async function neon(
+  key: string,
+  path: string,
+  init?: RequestInit,
+): Promise<unknown> {
   const response = await fetch(`https://console.neon.tech/api/v2${path}`, {
     ...init,
     headers: {
@@ -40,13 +50,21 @@ async function neon(key: string, path: string, init?: RequestInit): Promise<unkn
   return body;
 }
 
-async function findOrCreateProject(key: string, name: string, regionId: string): Promise<string> {
-  const listed = (await neon(key, "/projects")) as { projects?: Array<{ id: string; name: string }> };
+async function findOrCreateProject(
+  key: string,
+  name: string,
+  regionId: string,
+): Promise<string> {
+  const listed = (await neon(key, "/projects")) as {
+    projects?: Array<{ id: string; name: string }>;
+  };
   const existing = listed.projects?.find((project) => project.name === name);
   if (existing) return existing.id;
   const created = (await neon(key, "/projects", {
     method: "POST",
-    body: JSON.stringify({ project: { name, region_id: regionId, pg_version: 17 } }),
+    body: JSON.stringify({
+      project: { name, region_id: regionId, pg_version: 17 },
+    }),
   })) as { project?: { id?: string } };
   const id = created.project?.id;
   if (!id) throw new Error("Neon did not return a project id");
@@ -60,7 +78,10 @@ async function ensureDevBranch(key: string, projectId: string): Promise<void> {
   if (listed.branches?.some((branch) => branch.name === "dev")) return;
   await neon(key, `/projects/${projectId}/branches`, {
     method: "POST",
-    body: JSON.stringify({ branch: { name: "dev" }, endpoints: [{ type: "read_write" }] }),
+    body: JSON.stringify({
+      branch: { name: "dev" },
+      endpoints: [{ type: "read_write" }],
+    }),
   });
 }
 
@@ -74,7 +95,10 @@ async function connectionUri(key: string, projectId: string): Promise<string> {
   const roles = (await neon(key, `/projects/${projectId}/branches`)) as {
     branches?: Array<{ id: string; name: string; primary?: boolean }>;
   };
-  const main = roles.branches?.find((branch) => branch.name === "main" || branch.primary) ?? roles.branches?.[0];
+  const main =
+    roles.branches?.find(
+      (branch) => branch.name === "main" || branch.primary,
+    ) ?? roles.branches?.[0];
   if (!main) throw new Error("Neon project has no branches");
   const uri = (await neon(
     key,

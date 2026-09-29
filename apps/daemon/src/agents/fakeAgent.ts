@@ -27,7 +27,12 @@ async function requestPermission(): Promise<Json> {
     method: "session/request_permission",
     params: {
       sessionId,
-      toolCall: { toolCallId: "tool-1", title: "Run tests", status: "pending", kind: "execute" },
+      toolCall: {
+        toolCallId: "tool-1",
+        title: "Run tests",
+        status: "pending",
+        kind: "execute",
+      },
       options: [
         { optionId: "allow", name: "Allow", kind: "allow_once" },
         { optionId: "reject", name: "Reject", kind: "reject_once" },
@@ -45,7 +50,8 @@ async function handleRequest(message: Json) {
       ? [{ id: process.env.FAKE_AUTH_METHOD, name: "Login" }]
       : [];
     respond(id, {
-      protocolVersion: typeof body.protocolVersion === "number" ? body.protocolVersion : 1,
+      protocolVersion:
+        typeof body.protocolVersion === "number" ? body.protocolVersion : 1,
       agentCapabilities: { loadSession: false },
       agentInfo: { name: "fake-agent", version: "0.0.1" },
       authMethods,
@@ -67,14 +73,17 @@ async function handleRequest(message: Json) {
       .map((block) => {
         if (!block || typeof block !== "object") return "";
         const record = block as Json;
-        return record.type === "text" && typeof record.text === "string" ? record.text : "";
+        return record.type === "text" && typeof record.text === "string"
+          ? record.text
+          : "";
       })
       .join("");
     if (text.includes("PERMISSION")) {
       const permission = await requestPermission();
       const result = permission.result as Json | undefined;
       const outcome = result?.outcome as Json | undefined;
-      const selected = outcome?.outcome === "selected" && outcome.optionId === "allow";
+      const selected =
+        outcome?.outcome === "selected" && outcome.optionId === "allow";
       if (!selected) {
         respond(id, { stopReason: "cancelled" });
         return;
@@ -97,7 +106,10 @@ function notify(text: string) {
     method: "session/update",
     params: {
       sessionId,
-      update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text } },
+      update: {
+        sessionUpdate: "agent_message_chunk",
+        content: { type: "text", text },
+      },
     },
   });
 }

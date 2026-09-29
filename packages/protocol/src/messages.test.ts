@@ -1,14 +1,23 @@
 import { describe, expect, test } from "bun:test";
-import { parseClientMessage, parseServerMessage, qrPayloadSchema } from "./messages";
+import {
+  parseClientMessage,
+  parseServerMessage,
+  qrPayloadSchema,
+} from "./messages";
 
 describe("phone protocol", () => {
   test("accepts a session prompt and rejects an empty one", () => {
     expect(
-      parseClientMessage({ type: "session.prompt", sessionId: "s1", text: "fix the tests" }).success,
+      parseClientMessage({
+        type: "session.prompt",
+        sessionId: "s1",
+        text: "fix the tests",
+      }).success,
     ).toBe(true);
-    expect(parseClientMessage({ type: "session.prompt", sessionId: "s1", text: "" }).success).toBe(
-      false,
-    );
+    expect(
+      parseClientMessage({ type: "session.prompt", sessionId: "s1", text: "" })
+        .success,
+    ).toBe(false);
   });
 
   test("round-trips a permission request", () => {

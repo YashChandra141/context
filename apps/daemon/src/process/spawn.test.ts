@@ -1,12 +1,15 @@
+import { describe, expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "bun:test";
 import { argvForResolved, buildSpawnArgv, killTree, quoteCmd } from "./spawn";
 
 describe("windows spawn", () => {
   test("routes .cmd shims through cmd.exe", () => {
-    const argv = argvForResolved("C:\\Tools\\bunx.cmd", ["pi-acp", "with space"]);
+    const argv = argvForResolved("C:\\Tools\\bunx.cmd", [
+      "pi-acp",
+      "with space",
+    ]);
     if (process.platform === "win32") {
       expect(argv[0]?.toLowerCase()).toContain("cmd.exe");
       expect(argv).toContain("/c");
@@ -25,12 +28,18 @@ describe("windows spawn", () => {
 
   test("resolves bun and can stop a process tree", async () => {
     const argv = buildSpawnArgv("bun", ["-e", "setInterval(() => {}, 1000)"]);
-    const proc = Bun.spawn(argv, { stdout: "ignore", stderr: "ignore", windowsHide: true });
+    const proc = Bun.spawn(argv, {
+      stdout: "ignore",
+      stderr: "ignore",
+      windowsHide: true,
+    });
     expect(proc.pid).toBeGreaterThan(0);
     await killTree(proc.pid);
     const code = await Promise.race([
       proc.exited.then((exitCode) => exitCode ?? 0),
-      new Promise<string>((resolve) => setTimeout(() => resolve("timeout"), 8000)),
+      new Promise<string>((resolve) =>
+        setTimeout(() => resolve("timeout"), 8000),
+      ),
     ]);
     expect(code).not.toBe("timeout");
   });

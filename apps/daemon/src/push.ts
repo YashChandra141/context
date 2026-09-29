@@ -8,7 +8,12 @@ export type PushMessage = {
 
 export type PushSender = (messages: PushMessage[]) => Promise<void>;
 
-export function buildPush(tokens: string[], title: string, body: string, sessionId: string): PushMessage[] {
+export function buildPush(
+  tokens: string[],
+  title: string,
+  body: string,
+  sessionId: string,
+): PushMessage[] {
   return tokens.map((to) => ({
     to,
     title,

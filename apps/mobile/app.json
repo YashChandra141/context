@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Agent Controller",
+    "slug": "agent-controller",
+    "scheme": "agent-controller",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scan the pairing QR code shown by the daemon on your computer."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#34d399"
+        }
+      ],
+      "expo-secure-store",
+      "expo-status-bar"
+    ],
+    "android": {
+      "package": "com.phone.agentcontroller"
+    },
+    "ios": {
+      "bundleIdentifier": "com.phone.agentcontroller",
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

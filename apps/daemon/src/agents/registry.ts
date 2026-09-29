@@ -51,7 +51,11 @@ export type LaunchSpec = {
   readyTimeoutMs?: number;
 };
 
-export function launchSpecFor(agent: AgentId, cwd: string, config: AppConfig): LaunchSpec {
+export function launchSpecFor(
+  agent: AgentId,
+  cwd: string,
+  config: AppConfig,
+): LaunchSpec {
   const base = AGENT_REGISTRY[agent];
   const override = config.agentOverrides[agent];
   return {

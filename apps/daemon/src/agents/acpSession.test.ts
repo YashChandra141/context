@@ -1,5 +1,5 @@
-import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 import { AcpSession } from "./acpSession";
 
 const fakeAgent = fileURLToPath(new URL("./fakeAgent.ts", import.meta.url));
@@ -19,12 +19,18 @@ describe("ACP session", () => {
       {
         onUpdate(update) {
           const content = update.update;
-          if (content.sessionUpdate === "agent_message_chunk" && content.content.type === "text") {
+          if (
+            content.sessionUpdate === "agent_message_chunk" &&
+            content.content.type === "text"
+          ) {
             updates.push(content.content.text);
           }
         },
         onPermission: async (params) => ({
-          outcome: { outcome: "selected", optionId: params.options[0]?.optionId ?? "allow" },
+          outcome: {
+            outcome: "selected",
+            optionId: params.options[0]?.optionId ?? "allow",
+          },
         }),
       },
     );

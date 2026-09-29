@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { SessionBuffer, combineReplay } from "./buffer";
+import { combineReplay, SessionBuffer } from "./buffer";
 
 describe("session buffer", () => {
   test("replays from memory until the ring drops older events", () => {
@@ -16,7 +16,13 @@ describe("session buffer", () => {
     const buffer = new SessionBuffer("s1", 2, 2);
     buffer.append({ n: 3 });
     const dbEvents = [
-      { type: "event" as const, sessionId: "s1", seq: 2, fromSeq: 1, update: { text: "merged" } },
+      {
+        type: "event" as const,
+        sessionId: "s1",
+        seq: 2,
+        fromSeq: 1,
+        update: { text: "merged" },
+      },
     ];
     const replay = combineReplay(buffer, dbEvents, 0);
     expect(replay.map((event) => event.seq)).toEqual([2, 3]);

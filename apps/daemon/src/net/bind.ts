@@ -3,7 +3,9 @@ const FORBIDDEN_HOSTS = new Set(["0.0.0.0", "::", "[::]"]);
 export function assertBindHost(host: string): string {
   const trimmed = host.trim();
   if (FORBIDDEN_HOSTS.has(trimmed)) {
-    throw new Error("Refusing to bind to all interfaces. Set BIND_HOST to your Tailscale IP.");
+    throw new Error(
+      "Refusing to bind to all interfaces. Set BIND_HOST to your Tailscale IP.",
+    );
   }
   return trimmed;
 }
@@ -21,7 +23,11 @@ export async function resolveBindHost(): Promise<string> {
 async function readTailscaleIpv4(): Promise<string | null> {
   const binary = Bun.which("tailscale");
   if (!binary) return null;
-  const proc = Bun.spawn([binary, "ip", "-4"], { stdout: "pipe", stderr: "pipe", windowsHide: true });
+  const proc = Bun.spawn([binary, "ip", "-4"], {
+    stdout: "pipe",
+    stderr: "pipe",
+    windowsHide: true,
+  });
   const text = await new Response(proc.stdout).text();
   if ((await proc.exited) !== 0) return null;
   const ip = text.trim().split(/\s+/)[0];

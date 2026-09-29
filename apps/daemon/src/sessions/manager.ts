@@ -1,9 +1,15 @@
-import type { AgentId, EventMessage, PermissionOption, ServerMessage, SessionSummary } from "@phone/protocol";
+import type {
+  AgentId,
+  EventMessage,
+  PermissionOption,
+  ServerMessage,
+  SessionSummary,
+} from "@phone/protocol";
 import { AcpSession } from "../agents/acpSession";
 import { launchSpecFor } from "../agents/registry";
 import type { AppConfig } from "../config";
 import type { EventRow, Store } from "../db/store";
-import { BatchedDbWriter } from "../db/writer";
+import type { BatchedDbWriter } from "../db/writer";
 import { assertAllowed } from "../paths";
 import { buildPush, type PushSender } from "../push";
 import { errorMessage } from "../util";
@@ -23,7 +29,10 @@ const PERMISSION_TIMEOUT_MS = 5 * 60 * 1000;
 
 export class SessionManager {
   private readonly live = new Map<string, LiveSession>();
-  private readonly permissions = new Map<string, (optionId: string | null) => void>();
+  private readonly permissions = new Map<
+    string,
+    (optionId: string | null) => void
+  >();
 
   constructor(
     private readonly config: AppConfig,
@@ -33,7 +42,11 @@ export class SessionManager {
     private readonly push: PushSender,
   ) {}
 
-  async create(input: { agent: AgentId; cwd: string; requestId?: string }): Promise<SessionSummary> {
+  async create(input: {
+    agent: AgentId;
+    cwd: string;
+    requestId?: string;
+  }): Promise<SessionSummary> {
     const cwd = assertAllowed(input.cwd, this.config.allowedRoots);
     const id = crypto.randomUUID();
     const now = new Date();
@@ -52,7 +65,8 @@ export class SessionManager {
       onUpdate: (notification) => {
         this.record(id, notification.update);
       },
-      onPermission: (params) => this.permission(id, params.toolCall, params.options),
+      onPermission: (params) =>
+        this.permission(id, params.toolCall, params.options),
     });
     const live: LiveSession = {
       id,
@@ -67,7 +81,10 @@ export class SessionManager {
     try {
       const started = await acp.start();
       live.status = "idle";
-      await this.store.updateSession(id, { acpSessionId: started.sessionId, status: "idle" });
+      await this.store.updateSession(id, {
+        acpSessionId: started.sessionId,
+        status: "idle",
+      });
     } catch (error) {
       this.live.delete(id);
       await this.store.updateSession(id, { status: "error" });
@@ -77,14 +94,22 @@ export class SessionManager {
       throw error;
     }
     const summary = await this.requireSummary(id);
-    this.broadcast({ type: "session.created", requestId: input.requestId, session: summary });
+    this.broadcast({
+      type: "session.created",
+      requestId: input.requestId,
+      session: summary,
+    });
     return summary;
   }
 
   prompt(sessionId: string, text: string): void {
     const live = this.requireLive(sessionId);
     if (live.status === "running") {
-      this.broadcast({ type: "error", sessionId, message: "This session is already working on a prompt." });
+      this.broadcast({
+        type: "error",
+        sessionId,
+        message: "This session is already working on a prompt.",
+      });
       return;
     }
     void this.runPrompt(live, text);
@@ -135,26 +160,48 @@ export class SessionManager {
   private async runPrompt(live: LiveSession, text: string) {
     live.status = "running";
     if (!live.title) live.title = text.replace(/\s+/g, " ").trim().slice(0, 80);
-    await this.store.updateSession(live.id, { status: "running", title: live.title });
-    this.broadcast({ type: "session.updated", session: await this.requireSummary(live.id) });
+    await this.store.updateSession(live.id, {
+      status: "running",
+      title: live.title,
+    });
+    this.broadcast({
+      type: "session.updated",
+      session: await this.requireSummary(live.id),
+    });
     this.record(live.id, { sessionUpdate: "user_prompt", text });
     try {
       const result = await live.acp.prompt(text);
       await this.finishTurn(live, result.stopReason);
     } catch (error) {
-      this.record(live.id, { sessionUpdate: "daemon_notice", text: errorMessage(error) });
+      this.record(live.id, {
+        sessionUpdate: "daemon_notice",
+        text: errorMessage(error),
+      });
       const status = live.acp.alive ? "idle" : "error";
       await this.finishTurn(live, "error", status);
     }
   }
 
-  private async finishTurn(live: LiveSession, stopReason: string, status: SessionSummary["status"] = "idle") {
+  private async finishTurn(
+    live: LiveSession,
+    stopReason: string,
+    status: SessionSummary["status"] = "idle",
+  ) {
     live.status = status;
     await this.store.updateSession(live.id, { status });
     void this.writer.flush();
     this.broadcast({ type: "turn.end", sessionId: live.id, stopReason });
-    this.broadcast({ type: "session.updated", session: await this.requireSummary(live.id) });
-    void this.notify(live.id, "Agent finished", stopReason === "end_turn" ? live.title ?? "Turn complete" : `Stopped: ${stopReason}`);
+    this.broadcast({
+      type: "session.updated",
+      session: await this.requireSummary(live.id),
+    });
+    void this.notify(
+      live.id,
+      "Agent finished",
+      stopReason === "end_turn"
+        ? (live.title ?? "Turn complete")
+        : `Stopped: ${stopReason}`,
+    );
   }
 
   private permission(
@@ -168,10 +215,20 @@ export class SessionManager {
       name: option.name,
       kind: option.kind,
     }));
-    this.broadcast({ type: "permission.request", requestId, sessionId, toolCall, options: wireOptions });
+    this.broadcast({
+      type: "permission.request",
+      requestId,
+      sessionId,
+      toolCall,
+      options: wireOptions,
+    });
     const title = toolCall.title ?? "An agent wants to use a tool";
     void this.notify(sessionId, "Permission needed", title);
-    return new Promise<{ outcome: { outcome: "selected"; optionId: string } | { outcome: "cancelled" } }>((resolve) => {
+    return new Promise<{
+      outcome:
+        | { outcome: "selected"; optionId: string }
+        | { outcome: "cancelled" };
+    }>((resolve) => {
       const finish = (optionId: string | null) => {
         clearTimeout(timer);
         if (!optionId) {
@@ -207,7 +264,11 @@ export class SessionManager {
     const row = await this.store.getSession(sessionId);
     if (!row) throw new Error("Session not found");
     const live = this.live.get(sessionId);
-    return toSummary(live ? { ...row, title: live.title ?? row.title, status: live.status } : row);
+    return toSummary(
+      live
+        ? { ...row, title: live.title ?? row.title, status: live.status }
+        : row,
+    );
   }
 
   private async notify(sessionId: string, title: string, body: string) {

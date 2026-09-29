@@ -18,9 +18,13 @@ export type AppConfig = {
   agentOverrides: Partial<Record<AgentId, AgentOverride>>;
 };
 
+export function isBundledModuleDir(dir: string): boolean {
+  return dir.includes("$bunfs") || dir.includes("~BUN");
+}
+
 export function daemonRoot(): string {
   if (process.env.DAEMON_HOME) return resolve(process.env.DAEMON_HOME);
-  if (import.meta.dir.includes("$bunfs")) return dirname(process.execPath);
+  if (isBundledModuleDir(import.meta.dir)) return dirname(process.execPath);
   return resolve(import.meta.dir, "..");
 }
 
@@ -70,7 +74,9 @@ async function readConfigFile(root: string): Promise<FileConfig> {
   if (customText) return parseConfig(customText);
   const exampleText = await readOptional(example);
   if (exampleText) {
-    console.warn("Using daemon.config.example.json. Copy it to daemon.config.json to customize allow-listed folders.");
+    console.warn(
+      "Using daemon.config.example.json. Copy it to daemon.config.json to customize allow-listed folders.",
+    );
     return parseConfig(exampleText);
   }
   return {};
@@ -89,14 +95,17 @@ function parseConfig(text: string): FileConfig {
   if (!value || typeof value !== "object") return {};
   const record = value as Record<string, unknown>;
   return {
-    machineName: typeof record.machineName === "string" ? record.machineName : undefined,
+    machineName:
+      typeof record.machineName === "string" ? record.machineName : undefined,
     port: typeof record.port === "number" ? record.port : undefined,
     allowedRoots: stringArray(record.allowedRoots),
     agentOverrides: parseOverrides(record.agents),
   };
 }
 
-function parseOverrides(value: unknown): AppConfig["agentOverrides"] | undefined {
+function parseOverrides(
+  value: unknown,
+): AppConfig["agentOverrides"] | undefined {
   if (!value || typeof value !== "object") return undefined;
   const overrides: AppConfig["agentOverrides"] = {};
   for (const [key, entry] of Object.entries(value)) {
@@ -112,7 +121,12 @@ function parseOverrides(value: unknown): AppConfig["agentOverrides"] | undefined
 }
 
 function isAgentId(value: string): value is AgentId {
-  return value === "claude" || value === "codex" || value === "cursor" || value === "pi";
+  return (
+    value === "claude" ||
+    value === "codex" ||
+    value === "cursor" ||
+    value === "pi"
+  );
 }
 
 function stringArray(value: unknown): string[] | undefined {

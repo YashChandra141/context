@@ -29,7 +29,9 @@ export type DeviceRow = {
   lastSeenAt: Date | null;
 };
 
-export type SessionPatch = Partial<Pick<SessionRow, "acpSessionId" | "title" | "status" | "updatedAt">>;
+export type SessionPatch = Partial<
+  Pick<SessionRow, "acpSessionId" | "title" | "status" | "updatedAt">
+>;
 
 export interface Store {
   ensureMachine(id: string, name: string): Promise<void>;

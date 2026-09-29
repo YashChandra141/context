@@ -1,9 +1,19 @@
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const machines = pgTable("machines", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
 });
 
 export const sessions = pgTable(
@@ -18,8 +28,12 @@ export const sessions = pgTable(
     cwd: text("cwd").notNull(),
     title: text("title"),
     status: text("status").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [index("sessions_machine_idx").on(table.machineId)],
 );
@@ -34,7 +48,9 @@ export const events = pgTable(
     fromSeq: integer("from_seq").notNull(),
     type: text("type").notNull(),
     payload: jsonb("payload").$type<unknown>().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.sessionId, table.seq] })],
 );
@@ -49,6 +65,9 @@ export const devices = pgTable("devices", {
 
 export const pairingCodes = pgTable("pairing_codes", {
   codeHash: text("code_hash").primaryKey(),
-  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+  expiresAt: timestamp("expires_at", {
+    withTimezone: true,
+    mode: "date",
+  }).notNull(),
   usedAt: timestamp("used_at", { withTimezone: true, mode: "date" }),
 });

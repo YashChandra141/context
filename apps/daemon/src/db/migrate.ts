@@ -1,4 +1,4 @@
-import { SQL } from "bun";
+import type { SQL } from "bun";
 import initSql from "../../drizzle/0000_init.sql" with { type: "text" };
 import { splitSql } from "./sql";
 
@@ -9,7 +9,9 @@ export async function applyMigrations(sql: SQL): Promise<void> {
     id text PRIMARY KEY,
     applied_at timestamptz NOT NULL DEFAULT now()
   )`);
-  const rows = (await sql`SELECT id FROM schema_migrations`) as Array<{ id: string }>;
+  const rows = (await sql`SELECT id FROM schema_migrations`) as Array<{
+    id: string;
+  }>;
   const applied = new Set(rows.map((row) => row.id));
   for (const migration of migrations) {
     if (applied.has(migration.id)) continue;

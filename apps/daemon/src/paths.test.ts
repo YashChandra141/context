@@ -1,7 +1,7 @@
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "bun:test";
 import { assertAllowed } from "./paths";
 
 describe("allow-list", () => {
@@ -15,7 +15,9 @@ describe("allow-list", () => {
     writeFileSync(file, "ok");
 
     expect(assertAllowed(file, [project])).toBe(file);
-    expect(() => assertAllowed(join(evil, "note.txt"), [project])).toThrow(/allow-list/);
+    expect(() => assertAllowed(join(evil, "note.txt"), [project])).toThrow(
+      /allow-list/,
+    );
   });
 
   test("rejects a symlink that points outside the root", () => {

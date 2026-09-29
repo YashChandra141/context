@@ -3,7 +3,13 @@ import { z } from "zod";
 export const agentIdSchema = z.enum(["claude", "codex", "cursor", "pi"]);
 export type AgentId = z.infer<typeof agentIdSchema>;
 
-export const sessionStatusSchema = z.enum(["starting", "running", "idle", "error", "closed"]);
+export const sessionStatusSchema = z.enum([
+  "starting",
+  "running",
+  "idle",
+  "error",
+  "closed",
+]);
 export type SessionStatus = z.infer<typeof sessionStatusSchema>;
 
 export const sessionSummarySchema = z.object({

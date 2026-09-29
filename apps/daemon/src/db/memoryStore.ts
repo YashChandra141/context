@@ -1,10 +1,19 @@
-import type { DeviceRow, EventRow, SessionPatch, SessionRow, Store } from "./store";
+import type {
+  DeviceRow,
+  EventRow,
+  SessionPatch,
+  SessionRow,
+  Store,
+} from "./store";
 
 export class MemoryStore implements Store {
   private readonly machines = new Map<string, string>();
   private readonly sessions = new Map<string, SessionRow>();
   private readonly events: EventRow[] = [];
-  private readonly codes = new Map<string, { expiresAt: Date; usedAt: Date | null }>();
+  private readonly codes = new Map<
+    string,
+    { expiresAt: Date; usedAt: Date | null }
+  >();
   private readonly devices = new Map<string, DeviceRow>();
 
   async ensureMachine(id: string, name: string): Promise<void> {
@@ -14,7 +23,11 @@ export class MemoryStore implements Store {
   async closeDanglingSessions(machineId: string): Promise<void> {
     for (const session of this.sessions.values()) {
       if (session.machineId !== machineId) continue;
-      if (session.status === "starting" || session.status === "running" || session.status === "idle") {
+      if (
+        session.status === "starting" ||
+        session.status === "running" ||
+        session.status === "idle"
+      ) {
         session.status = "closed";
         session.updatedAt = new Date();
       }
@@ -28,7 +41,11 @@ export class MemoryStore implements Store {
   async updateSession(id: string, patch: SessionPatch): Promise<void> {
     const current = this.sessions.get(id);
     if (!current) return;
-    this.sessions.set(id, { ...current, ...patch, updatedAt: patch.updatedAt ?? new Date() });
+    this.sessions.set(id, {
+      ...current,
+      ...patch,
+      updatedAt: patch.updatedAt ?? new Date(),
+    });
   }
 
   async getSession(id: string): Promise<SessionRow | null> {
@@ -39,16 +56,22 @@ export class MemoryStore implements Store {
   async listSessions(machineId: string): Promise<SessionRow[]> {
     return [...this.sessions.values()]
       .filter((session) => session.machineId === machineId)
-      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
+      .sort(
+        (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+      )
       .map((session) => ({ ...session }));
   }
 
   async maxSeq(sessionId: string): Promise<number> {
-    return this.events.filter((event) => event.sessionId === sessionId).reduce((max, event) => Math.max(max, event.seq), 0);
+    return this.events
+      .filter((event) => event.sessionId === sessionId)
+      .reduce((max, event) => Math.max(max, event.seq), 0);
   }
 
   async insertEvents(rows: EventRow[]): Promise<void> {
-    const seen = new Set(this.events.map((event) => `${event.sessionId}:${event.seq}`));
+    const seen = new Set(
+      this.events.map((event) => `${event.sessionId}:${event.seq}`),
+    );
     for (const row of rows) {
       const key = `${row.sessionId}:${row.seq}`;
       if (seen.has(key)) continue;
@@ -97,6 +120,8 @@ export class MemoryStore implements Store {
   }
 
   async listPushTokens(): Promise<string[]> {
-    return [...this.devices.values()].flatMap((device) => (device.expoPushToken ? [device.expoPushToken] : []));
+    return [...this.devices.values()].flatMap((device) =>
+      device.expoPushToken ? [device.expoPushToken] : [],
+    );
   }
 }

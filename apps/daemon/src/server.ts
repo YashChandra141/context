@@ -12,7 +12,12 @@ import type { ServerWebSocket } from "bun";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { listAgents } from "./agents/registry";
-import { hashSecret, isExpoPushToken, newDeviceToken, newPairingCode } from "./auth";
+import {
+  hashSecret,
+  isExpoPushToken,
+  newDeviceToken,
+  newPairingCode,
+} from "./auth";
 import type { AppConfig } from "./config";
 import type { Store } from "./db/store";
 import { BatchedDbWriter } from "./db/writer";
@@ -66,16 +71,29 @@ export async function startServer(options: {
   app.post("/api/pairing-code", async (c) => {
     pairing = await issuePairingCode(store);
     console.log(`New pairing code: ${pairing.code}`);
-    return c.json({ code: pairing.code, expiresInSeconds: PAIRING_TTL_MS / 1000 });
+    return c.json({
+      code: pairing.code,
+      expiresInSeconds: PAIRING_TTL_MS / 1000,
+    });
   });
   app.post("/api/pair", async (c) => {
-    const parsed = pairRequestSchema.safeParse(await c.req.json().catch(() => null));
-    if (!parsed.success) return c.json({ error: "Invalid pairing request" }, 400);
-    const ok = await store.consumePairingCode(hashSecret(parsed.data.code), new Date());
-    if (!ok) return c.json({ error: "Pairing code is invalid or expired" }, 401);
+    const parsed = pairRequestSchema.safeParse(
+      await c.req.json().catch(() => null),
+    );
+    if (!parsed.success)
+      return c.json({ error: "Invalid pairing request" }, 400);
+    const ok = await store.consumePairingCode(
+      hashSecret(parsed.data.code),
+      new Date(),
+    );
+    if (!ok)
+      return c.json({ error: "Pairing code is invalid or expired" }, 401);
     const token = newDeviceToken();
     const deviceId = crypto.randomUUID();
-    const pushToken = parsed.data.expoPushToken && isExpoPushToken(parsed.data.expoPushToken) ? parsed.data.expoPushToken : null;
+    const pushToken =
+      parsed.data.expoPushToken && isExpoPushToken(parsed.data.expoPushToken)
+        ? parsed.data.expoPushToken
+        : null;
     await store.insertDevice({
       id: deviceId,
       tokenHash: hashSecret(token),
@@ -94,21 +112,33 @@ export async function startServer(options: {
   });
 
   app.use("/api/*", async (c, next) => {
-    if (c.req.path === "/api/pair" || c.req.path === "/api/pairing-code") return next();
+    if (c.req.path === "/api/pair" || c.req.path === "/api/pairing-code")
+      return next();
     const device = await deviceFromHeader(store, c.req.header("authorization"));
     if (!device) return c.json({ error: "Unauthorized" }, 401);
     await next();
   });
-  app.get("/api/agents", (c) => c.json(listAgents().map((agent) => agentInfoSchema.parse(agent))));
-  app.get("/api/projects", (c) => c.json(projectListSchema.parse({ roots: listProjects(config.allowedRoots) })));
+  app.get("/api/agents", (c) =>
+    c.json(listAgents().map((agent) => agentInfoSchema.parse(agent))),
+  );
+  app.get("/api/projects", (c) =>
+    c.json(
+      projectListSchema.parse({ roots: listProjects(config.allowedRoots) }),
+    ),
+  );
   app.get("/api/sessions", async (c) => {
     const sessions = await manager.list();
-    return c.json(sessions.map((session) => sessionSummarySchema.parse(session)));
+    return c.json(
+      sessions.map((session) => sessionSummarySchema.parse(session)),
+    );
   });
   app.get("/api/sessions/:id/events", async (c) => {
     const after = Number(c.req.query("afterSeq") ?? "0");
     try {
-      const events = await manager.replay(c.req.param("id"), Number.isFinite(after) ? after : 0);
+      const events = await manager.replay(
+        c.req.param("id"),
+        Number.isFinite(after) ? after : 0,
+      );
       return c.json({ events });
     } catch (error) {
       return c.json({ error: errorMessage(error) }, 404);
@@ -124,8 +154,15 @@ export async function startServer(options: {
       if (url.pathname === "/ws") {
         return upgrade(req, bunServer, store);
       }
-      if (url.pathname === "/api/pairing-code" && req.method === "POST" && !isLoopback(bunServer.requestIP(req)?.address)) {
-        return Response.json({ error: "Pairing codes can only be minted on this PC" }, { status: 403 });
+      if (
+        url.pathname === "/api/pairing-code" &&
+        req.method === "POST" &&
+        !isLoopback(bunServer.requestIP(req)?.address)
+      ) {
+        return Response.json(
+          { error: "Pairing codes can only be minted on this PC" },
+          { status: 403 },
+        );
       }
       return app.fetch(req);
     },
@@ -145,15 +182,25 @@ export async function startServer(options: {
         }
         const parsed = parseClientMessage(json);
         if (!parsed.success) {
-          send(socket, { type: "error", message: parsed.error.issues[0]?.message ?? "Invalid message" });
+          send(socket, {
+            type: "error",
+            message: parsed.error.issues[0]?.message ?? "Invalid message",
+          });
           return;
         }
         try {
           await dispatch(parsed.data, socket, manager, store);
         } catch (error) {
-          const requestId = "requestId" in parsed.data ? parsed.data.requestId : undefined;
-          const sessionId = "sessionId" in parsed.data ? parsed.data.sessionId : undefined;
-          send(socket, { type: "error", message: errorMessage(error), requestId, sessionId });
+          const requestId =
+            "requestId" in parsed.data ? parsed.data.requestId : undefined;
+          const sessionId =
+            "sessionId" in parsed.data ? parsed.data.sessionId : undefined;
+          send(socket, {
+            type: "error",
+            message: errorMessage(error),
+            requestId,
+            sessionId,
+          });
         }
       },
       close(socket) {
@@ -178,26 +225,40 @@ export async function startServer(options: {
   };
 }
 
-async function issuePairingCode(store: Store): Promise<{ url: string; code: string }> {
+async function issuePairingCode(
+  store: Store,
+): Promise<{ url: string; code: string }> {
   const code = newPairingCode();
-  await store.insertPairingCode(hashSecret(code), new Date(Date.now() + PAIRING_TTL_MS));
+  await store.insertPairingCode(
+    hashSecret(code),
+    new Date(Date.now() + PAIRING_TTL_MS),
+  );
   return { url: "", code };
 }
 
 function publicUrl(hostname: string, port: number, config: AppConfig): string {
   const configured = process.env.PUBLIC_URL ?? config.publicUrl;
   if (configured) return configured.replace(/\/$/u, "");
-  const host = hostname.includes(":") && !hostname.startsWith("[") ? `[${hostname}]` : hostname;
+  const host =
+    hostname.includes(":") && !hostname.startsWith("[")
+      ? `[${hostname}]`
+      : hostname;
   return `http://${host}:${port}`;
 }
 
 function isLoopback(address: string | undefined): boolean {
-  return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
+  return (
+    address === "127.0.0.1" ||
+    address === "::1" ||
+    address === "::ffff:127.0.0.1"
+  );
 }
 
 async function upgrade(
   req: Request,
-  bunServer: { upgrade: (req: Request, options: { data: SocketData }) => boolean },
+  bunServer: {
+    upgrade: (req: Request, options: { data: SocketData }) => boolean;
+  },
   store: Store,
 ): Promise<Response | undefined> {
   const token = new URL(req.url).searchParams.get("token") ?? "";
@@ -217,7 +278,12 @@ function send(socket: ServerWebSocket<SocketData>, message: ServerMessage) {
   socket.send(JSON.stringify(message));
 }
 
-async function dispatch(message: ClientMessage, socket: ServerWebSocket<SocketData>, manager: SessionManager, store: Store) {
+async function dispatch(
+  message: ClientMessage,
+  socket: ServerWebSocket<SocketData>,
+  manager: SessionManager,
+  store: Store,
+) {
   switch (message.type) {
     case "ping":
       send(socket, { type: "pong" });
@@ -236,18 +302,28 @@ async function dispatch(message: ClientMessage, socket: ServerWebSocket<SocketDa
       return;
     case "permission.respond":
       if (!manager.respond(message.requestId, message.optionId)) {
-        send(socket, { type: "error", message: "That permission request is no longer waiting." });
+        send(socket, {
+          type: "error",
+          message: "That permission request is no longer waiting.",
+        });
       }
       return;
     case "sync": {
       const events = await manager.replay(message.sessionId, message.afterSeq);
       for (const event of events) send(socket, event);
-      send(socket, { type: "sync.done", sessionId: message.sessionId, lastSeq: events.at(-1)?.seq ?? message.afterSeq });
+      send(socket, {
+        type: "sync.done",
+        sessionId: message.sessionId,
+        lastSeq: events.at(-1)?.seq ?? message.afterSeq,
+      });
       return;
     }
     case "push.register":
       if (!isExpoPushToken(message.token)) {
-        send(socket, { type: "error", message: "Expected an Expo push token." });
+        send(socket, {
+          type: "error",
+          message: "Expected an Expo push token.",
+        });
         return;
       }
       await store.setPushToken(socket.data.deviceId, message.token);

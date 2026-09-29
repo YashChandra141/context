@@ -3,7 +3,9 @@ export function errorMessage(error: unknown): string {
   return String(error);
 }
 
-export function childEnv(extra?: Record<string, string>): Record<string, string> {
+export function childEnv(
+  extra?: Record<string, string>,
+): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === "string") env[key] = value;

@@ -1,8 +1,8 @@
 import * as acp from "@agentclientprotocol/sdk";
-import type { LaunchSpec } from "./registry";
 import { assertAllowed } from "../paths";
 import { buildSpawnArgv, killTree } from "../process/spawn";
 import { childEnv, errorMessage } from "../util";
+import type { LaunchSpec } from "./registry";
 
 type PromptResult = { stopReason: string };
 
@@ -18,7 +18,9 @@ type Job =
 
 export type AcpHandlers = {
   onUpdate: (update: acp.SessionNotification) => void;
-  onPermission: (params: acp.RequestPermissionRequest) => Promise<acp.RequestPermissionResponse>;
+  onPermission: (
+    params: acp.RequestPermissionRequest,
+  ) => Promise<acp.RequestPermissionResponse>;
 };
 
 type TerminalProc = {
@@ -57,7 +59,11 @@ export class AcpSession {
 
   async start(): Promise<{ sessionId: string }> {
     const timeout = setTimeout(() => {
-      this.failReady(new Error(`Agent was not ready within ${this.spec.readyTimeoutMs ?? 120_000}ms. ${this.stderrText}`));
+      this.failReady(
+        new Error(
+          `Agent was not ready within ${this.spec.readyTimeoutMs ?? 120_000}ms. ${this.stderrText}`,
+        ),
+      );
     }, this.spec.readyTimeoutMs ?? 120_000);
     this.launch();
     try {
@@ -68,7 +74,10 @@ export class AcpSession {
   }
 
   prompt(text: string): Promise<PromptResult> {
-    if (!this.alive) return Promise.reject(new Error(`Agent process has exited. ${this.stderrText}`.trim()));
+    if (!this.alive)
+      return Promise.reject(
+        new Error(`Agent process has exited. ${this.stderrText}`.trim()),
+      );
     return new Promise((resolve, reject) => {
       this.enqueue({ type: "prompt", text, resolve, reject });
     });
@@ -90,7 +99,9 @@ export class AcpSession {
     try {
       argv = buildSpawnArgv(this.spec.command, this.spec.args);
     } catch (error) {
-      this.failReady(error instanceof Error ? error : new Error(errorMessage(error)));
+      this.failReady(
+        error instanceof Error ? error : new Error(errorMessage(error)),
+      );
       return;
     }
     const proc = Bun.spawn(argv, {
@@ -105,7 +116,11 @@ export class AcpSession {
     this.collectStderr(proc.stderr);
     proc.exited.then(() => {
       this.alive = false;
-      this.failReady(new Error(`Agent exited before the session was ready. ${this.stderrText}`.trim()));
+      this.failReady(
+        new Error(
+          `Agent exited before the session was ready. ${this.stderrText}`.trim(),
+        ),
+      );
       this.rejectQueued(new Error("Agent process has exited"));
     });
     if (!proc.stdout || !proc.stdin) {
@@ -115,18 +130,28 @@ export class AcpSession {
     const stream = acp.ndJsonStream(toWritable(proc.stdin), proc.stdout);
     this.runPromise = acp
       .client({ name: "phone-daemon" })
-      .onRequest(acp.methods.client.session.requestPermission, (ctx) => this.handlers.onPermission(ctx.params))
+      .onRequest(acp.methods.client.session.requestPermission, (ctx) =>
+        this.handlers.onPermission(ctx.params),
+      )
       .onNotification(acp.methods.client.session.update, (ctx) => {
         this.handlers.onUpdate(ctx.params);
       })
-      .onRequest(acp.methods.client.fs.readTextFile, (ctx) => this.readTextFile(ctx.params))
+      .onRequest(acp.methods.client.fs.readTextFile, (ctx) =>
+        this.readTextFile(ctx.params),
+      )
       .onRequest(acp.methods.client.fs.writeTextFile, async (ctx) => {
         await this.writeTextFile(ctx.params);
         return {};
       })
-      .onRequest(acp.methods.client.terminal.create, (ctx) => this.createTerminal(ctx.params))
-      .onRequest(acp.methods.client.terminal.output, (ctx) => this.terminalOutput(ctx.params))
-      .onRequest(acp.methods.client.terminal.waitForExit, (ctx) => this.waitForTerminal(ctx.params))
+      .onRequest(acp.methods.client.terminal.create, (ctx) =>
+        this.createTerminal(ctx.params),
+      )
+      .onRequest(acp.methods.client.terminal.output, (ctx) =>
+        this.terminalOutput(ctx.params),
+      )
+      .onRequest(acp.methods.client.terminal.waitForExit, (ctx) =>
+        this.waitForTerminal(ctx.params),
+      )
       .onRequest(acp.methods.client.terminal.kill, async (ctx) => {
         await this.killTerminal(ctx.params.terminalId);
         return {};
@@ -139,13 +164,17 @@ export class AcpSession {
         try {
           await this.openSession(ctx);
         } catch (error) {
-          this.failReady(error instanceof Error ? error : new Error(errorMessage(error)));
+          this.failReady(
+            error instanceof Error ? error : new Error(errorMessage(error)),
+          );
           return;
         }
         await this.jobLoop(ctx);
       })
       .catch((error: unknown) => {
-        this.failReady(error instanceof Error ? error : new Error(errorMessage(error)));
+        this.failReady(
+          error instanceof Error ? error : new Error(errorMessage(error)),
+        );
         this.rejectQueued(error);
       });
   }
@@ -168,7 +197,10 @@ export class AcpSession {
     this.succeed({ sessionId: session.sessionId });
   }
 
-  private async authenticate(ctx: acp.ClientContext, methods: acp.AuthMethod[]) {
+  private async authenticate(
+    ctx: acp.ClientContext,
+    methods: acp.AuthMethod[],
+  ) {
     const methodId = this.spec.authMethodId;
     if (!methodId) return;
     const advertised = methods.some((method) => method.id === methodId);
@@ -185,7 +217,9 @@ export class AcpSession {
       const job = await this.nextJob();
       if (job.type === "close") return;
       if (job.type === "cancel") {
-        await ctx.notify(acp.methods.agent.session.cancel, { sessionId: this.acpSessionId });
+        await ctx.notify(acp.methods.agent.session.cancel, {
+          sessionId: this.acpSessionId,
+        });
         continue;
       }
       try {
@@ -200,7 +234,9 @@ export class AcpSession {
     }
   }
 
-  private async readTextFile(params: acp.ReadTextFileRequest): Promise<acp.ReadTextFileResponse> {
+  private async readTextFile(
+    params: acp.ReadTextFileRequest,
+  ): Promise<acp.ReadTextFileResponse> {
     const path = assertAllowed(params.path, this.spec.allowedRoots);
     const file = Bun.file(path);
     if (!(await file.exists())) throw new Error(`File not found: ${path}`);
@@ -219,8 +255,13 @@ export class AcpSession {
     await Bun.write(path, params.content);
   }
 
-  private createTerminal(params: acp.CreateTerminalRequest): acp.CreateTerminalResponse {
-    const cwd = assertAllowed(params.cwd ?? this.spec.cwd, this.spec.allowedRoots);
+  private createTerminal(
+    params: acp.CreateTerminalRequest,
+  ): acp.CreateTerminalResponse {
+    const cwd = assertAllowed(
+      params.cwd ?? this.spec.cwd,
+      this.spec.allowedRoots,
+    );
     const argv = buildSpawnArgv(params.command, params.args ?? []);
     const env: Record<string, string> = {};
     for (const item of params.env ?? []) env[item.name] = item.value;
@@ -250,16 +291,23 @@ export class AcpSession {
     return { terminalId: terminal.id };
   }
 
-  private terminalOutput(params: acp.TerminalOutputRequest): acp.TerminalOutputResponse {
+  private terminalOutput(
+    params: acp.TerminalOutputRequest,
+  ): acp.TerminalOutputResponse {
     const terminal = this.terminal(params.terminalId);
     return {
       output: terminal.output,
       truncated: terminal.truncated,
-      exitStatus: terminal.exitCode === null ? null : { exitCode: terminal.exitCode, signal: terminal.signal },
+      exitStatus:
+        terminal.exitCode === null
+          ? null
+          : { exitCode: terminal.exitCode, signal: terminal.signal },
     };
   }
 
-  private async waitForTerminal(params: acp.WaitForTerminalExitRequest): Promise<acp.WaitForTerminalExitResponse> {
+  private async waitForTerminal(
+    params: acp.WaitForTerminalExitRequest,
+  ): Promise<acp.WaitForTerminalExitResponse> {
     const terminal = this.terminal(params.terminalId);
     const exitCode = await terminal.proc.exited;
     terminal.exitCode = exitCode;
@@ -274,7 +322,8 @@ export class AcpSession {
   private async releaseTerminal(terminalId: string): Promise<void> {
     const terminal = this.terminals.get(terminalId);
     if (!terminal) return;
-    if (terminal.exitCode === null && terminal.proc.pid) await killTree(terminal.proc.pid);
+    if (terminal.exitCode === null && terminal.proc.pid)
+      await killTree(terminal.proc.pid);
     this.terminals.delete(terminalId);
   }
 
@@ -346,7 +395,10 @@ function toWritable(stdin: Bun.FileSink): WritableStream<Uint8Array> {
   });
 }
 
-async function pump(stream: ReadableStream<Uint8Array> | null | undefined, onText: (text: string) => void) {
+async function pump(
+  stream: ReadableStream<Uint8Array> | null | undefined,
+  onText: (text: string) => void,
+) {
   if (!stream) return;
   const reader = stream.getReader();
   const decoder = new TextDecoder();
@@ -361,12 +413,19 @@ async function pump(stream: ReadableStream<Uint8Array> | null | undefined, onTex
   }
 }
 
-function trimOutput(value: string, limit: number): { output: string; truncated: boolean } {
+function trimOutput(
+  value: string,
+  limit: number,
+): { output: string; truncated: boolean } {
   const bytes = Buffer.byteLength(value);
   if (bytes <= limit) return { output: value, truncated: false };
   const buffer = Buffer.from(value);
   let start = Math.max(0, buffer.length - limit);
-  while (start < buffer.length && (buffer[start]! & 0b1100_0000) === 0b1000_0000) start += 1;
+  while (start < buffer.length) {
+    const byte = buffer[start] ?? 0;
+    if ((byte & 0b1100_0000) !== 0b1000_0000) break;
+    start += 1;
+  }
   return { output: buffer.subarray(start).toString("utf8"), truncated: true };
 }
 

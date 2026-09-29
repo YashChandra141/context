@@ -1,5 +1,5 @@
-import type { EventRow, Store } from "./store";
 import { mergeEvent, type StoredEvent } from "../sessions/merge";
+import type { EventRow, Store } from "./store";
 
 export class BatchedDbWriter {
   private pending: StoredEvent[] = [];
@@ -45,7 +45,10 @@ export class BatchedDbWriter {
       this.delay = 250;
     } catch (error) {
       this.pending = batch.concat(this.pending);
-      console.error("Database write failed; the stream continues and the batch will retry.", error);
+      console.error(
+        "Database write failed; the stream continues and the batch will retry.",
+        error,
+      );
       this.scheduleRetry();
     } finally {
       this.writing = false;

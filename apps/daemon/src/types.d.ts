@@ -5,7 +5,10 @@ declare module "*.sql" {
 
 declare module "qrcode" {
   const QRCode: {
-    toString(text: string, options?: { type?: string; small?: boolean }): Promise<string>;
+    toString(
+      text: string,
+      options?: { type?: string; small?: boolean },
+    ): Promise<string>;
   };
   export default QRCode;
 }

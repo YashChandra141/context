@@ -8,7 +8,9 @@ export function assertAllowed(target: string, roots: string[]): string {
     throw new Error(`Parent directory does not exist: ${parent}`);
   }
   const realParent = realpathSync(parent);
-  const realTarget = existsSync(resolved) ? realpathSync(resolved) : join(realParent, basename(resolved));
+  const realTarget = existsSync(resolved)
+    ? realpathSync(resolved)
+    : join(realParent, basename(resolved));
   const allowed = roots.some((root) => isInside(root, realTarget));
   if (!allowed) {
     throw new Error(`Path is outside the allow-list: ${realTarget}`);
@@ -16,7 +18,9 @@ export function assertAllowed(target: string, roots: string[]): string {
   return realTarget;
 }
 
-export function listProjects(roots: string[]): { path: string; directories: string[] }[] {
+export function listProjects(
+  roots: string[],
+): { path: string; directories: string[] }[] {
   return roots.map((root) => {
     const directories: string[] = [];
     try {

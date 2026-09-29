@@ -15,7 +15,12 @@ export class SessionBuffer {
   append(update: unknown): EventMessage {
     const seq = this.highSeq + 1;
     this.highSeq = seq;
-    const event: EventMessage = { type: "event", sessionId: this.sessionId, seq, update };
+    const event: EventMessage = {
+      type: "event",
+      sessionId: this.sessionId,
+      seq,
+      update,
+    };
     this.events.push(event);
     if (this.events.length > this.limit) this.events.shift();
     return event;
@@ -33,9 +38,16 @@ export class SessionBuffer {
   }
 }
 
-export function combineReplay(buffer: SessionBuffer | null, dbEvents: EventMessage[], afterSeq: number): EventMessage[] {
+export function combineReplay(
+  buffer: SessionBuffer | null,
+  dbEvents: EventMessage[],
+  afterSeq: number,
+): EventMessage[] {
   if (buffer?.covers(afterSeq)) return buffer.after(afterSeq);
-  const maxDb = dbEvents.reduce((max, event) => Math.max(max, event.seq), afterSeq);
+  const maxDb = dbEvents.reduce(
+    (max, event) => Math.max(max, event.seq),
+    afterSeq,
+  );
   const tail = buffer ? buffer.after(Math.max(afterSeq, maxDb)) : [];
   return [...dbEvents.filter((event) => event.seq > afterSeq), ...tail];
 }

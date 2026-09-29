@@ -13,5 +13,7 @@ export function newPairingCode(): string {
 }
 
 export function isExpoPushToken(token: string): boolean {
-  return token.startsWith("ExponentPushToken[") || token.startsWith("ExpoPushToken[");
+  return (
+    token.startsWith("ExponentPushToken[") || token.startsWith("ExpoPushToken[")
+  );
 }
